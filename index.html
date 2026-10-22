@@ -7,8 +7,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/mhchem.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{--bg:#09090b;--s1:#111115;--s2:#1a1a20;--line:rgba(255,255,255,.08);--tx:#ececf1;--mut:#8b8b99;--ac:#8b7bff;--ok:#34d399;--bad:#fb7185}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;outline:none!important}
@@ -30,7 +30,7 @@ input:focus,textarea:focus{border-color:#454e7a}
 .md h1,.md h2{margin:.8em 0 .3em}.md table{border-collapse:collapse}.md td,.md th{border:1px solid var(--line);padding:6px 10px}.md code{background:var(--s2);padding:2px 5px;border-radius:5px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
 .fc{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:18px;min-height:120px;cursor:pointer}
-.fc span{display:none;color:var(--ok);margin-top:10px}.fc.f span{display:block}.fc.f b{opacity:.6}
+.fc .ans{display:none;color:var(--ok);margin-top:10px}.fc.f .ans{display:block}.fc.f b{opacity:.6}
 .opt{display:block;width:100%;text-align:left;background:var(--s2);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0;font:inherit;cursor:pointer}
 .opt.ok{border-color:var(--ok);background:#12332a}.opt.bad{border-color:var(--bad);background:#3a1a22}.ex{color:var(--mut)}
 .li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line)}.li:last-child{border:0}.li button{background:none;border:0;color:var(--tx);padding:10px 0;font:inherit;cursor:pointer;text-align:left}.li i{color:var(--bad);cursor:pointer;font-style:normal;padding:10px 0;font-size:13px}
@@ -95,11 +95,11 @@ input:focus,textarea:focus{border-color:rgba(255,255,255,.22)}
 .md h2{padding-bottom:4px;border-bottom:1px solid var(--line)}.md h3{color:#c4baff}.md th{background:rgba(255,255,255,.04)}
 .katex{font-size:1.05em}.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0;margin:.6em 0}
 .ch{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.ch .b{margin:0;padding:8px 14px;font-size:14px}.hi{display:flex;justify-content:space-between;gap:12px}.hi span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hi i{color:var(--bad);font-style:normal;font-size:12px;flex:none}
+.mmw{position:relative;height:68dvh;min-height:380px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#0f1424;margin:12px 0 8px}.mmw canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}.zb{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px}.zb button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(26,26,32,.92);color:var(--tx);font-size:18px;cursor:pointer}
 </style></head><body>
 <header class="bar"><button class="mbtn" onclick="dr(1)" aria-label="Buka menu">☰</button><span class="lg">Belajar<b>WithAI</b></span><span id="ttl"></span></header><div id="sc" onclick="dr(0)"></div><nav id="nav"></nav><main id="main"></main>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-mermaid.initialize({startOnLoad:false,theme:"dark",themeVariables:{darkMode:true,background:"#09090b",primaryColor:"#2a2550",primaryTextColor:"#ececf1",lineColor:"#8b7bff"}});
 ["gesturestart","gesturechange","gestureend"].forEach(e=>document.addEventListener(e,x=>x.preventDefault()));
 document.addEventListener("wheel",e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
 document.addEventListener("touchmove",e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
@@ -114,7 +114,7 @@ function md(t,e,inl){const M=[];t=String(t??"").replace(/\$\$([\s\S]+?)\$\$|\\\[
 const clean=s=>s.replace(/```\w*/g,"").trim();
 function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2500)}
 function ask(msg){return new Promise(r=>{const m=document.createElement("div");m.className="ov";m.innerHTML=`<div class=md2><p>${esc(msg)}</p><button class=b>Hapus</button><button class="b g">Batal</button></div>`;const[a,b]=m.querySelectorAll("button");a.onclick=()=>{m.remove();r(1)};b.onclick=()=>{m.remove();r(0)};document.body.append(m)})}
-async function ai(prompt,o={}){const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,...o})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Permintaan gagal");return o.json?JSON.parse(clean(d.text)):d.text}
+async function ai(prompt,o={}){const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,...o})}),x=await r.text();let d;try{d=JSON.parse(x)}catch{throw new Error(r.status==504||r.status==408?"Server kelamaan merespons (timeout). Coba materi atau video yang lebih pendek.":"Server error ("+r.status+"). Coba lagi sebentar.")}if(!r.ok)throw new Error(d.error||"Permintaan gagal");return o.json?JSON.parse(clean(d.text)):d.text}
 async function fileText(f){if(/\.pdf$/i.test(f.name)){const p=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;let t="";for(let i=1;i<=p.numPages;i++)t+=(await(await p.getPage(i)).getTextContent()).items.map(x=>x.str).join(" ")+"\n";return t}return f.text()}
 // ---- Komponen UI sendiri (tanpa UI bawaan browser) ----
 const dd=()=>{const n=S.notes.find(x=>x.id==SEL);return `<div class=dd><button class=ddb onclick="tg(event)"><span>${n?esc(n.title):"Pilih catatan"}</span><i>▾</i></button><div class=ddl>${S.notes.length?`<div onclick="pk('')">Tanpa catatan</div>`+S.notes.map(x=>`<div class="${x.id==SEL?"on":""}" onclick="pk('${x.id}')">${esc(x.title)}</div>`).join(""):"<em>Belum ada catatan</em>"}</div></div>`};
@@ -133,62 +133,72 @@ const libr=k=>{$("#lib").innerHTML=S[k].length?"<h3>Tersimpan</h3>"+S[k].map(x=>
 window.openI=(k,id)=>R[k](S[k].find(x=>x.id==id),$("#out"));
 window.del=async(k,id,rf)=>{if(!await ask("Hapus item ini? Tidak bisa dibatalkan."))return;S[k]=S[k].filter(x=>x.id!=id);save();if(rf)go("saved");else{libr(k);$("#out").innerHTML=""}toast("Dihapus")};
 // ---- Render hasil ----
+// ---- Mind map interaktif (canvas) ----
+const MW=230,MH=84,GX=64,GY=16,PAL=["#8b7bff","#34d399","#f59e0b","#38bdf8","#fb7185","#a3e635","#f472b6"],cl=t=>String(t||"").replace(/\$|\\[a-zA-Z]+/g,"").trim();
+function fromCode(c){const st=[];let root=null;for(const l of String(c).split("\n")){if(!l.trim()||/^\s*mindmap\s*$/i.test(l))continue;const ind=l.match(/^\s*/)[0].length,t=l.trim().replace(/^\w*\(\((.*)\)\)$/,"$1").replace(/[\[\]\(\)\{\}]/g,""),n={title:t,desc:"",children:[]};while(st.length&&st[st.length-1].i>=ind)st.pop();if(st.length)st[st.length-1].n.children.push(n);else if(!root)root=n;st.push({i:ind,n})}return root||{title:"Mind Map",desc:"",children:[]}}
+function layout(root){let row=0,md=0;const mk=(n,d,col)=>{md=Math.max(md,d);const o={n,d,col,x:d*(MW+GX),k:[]};if(!n.c)o.k=(n.children||[]).map((c,i)=>mk(c,d+1,d==0?PAL[i%PAL.length]:col));o.y=o.k.length?(o.k[0].y+o.k[o.k.length-1].y)/2:(row++)*(MH+GY);return o};const r=mk(root,0,"");return{r,w:(md+1)*(MW+GX)-GX,h:row*(MH+GY)-GY}}
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function wrap(c,t,w,max){const L=[];let l="";for(const x of String(t).split(/\s+/).filter(Boolean)){const s=l?l+" "+x:x;if(c.measureText(s).width>w&&l){L.push(l);l=x}else l=s}if(l)L.push(l);if(L.length>max){L.length=max;let s=L[max-1];while(s&&c.measureText(s+"…").width>w)s=s.slice(0,-1);L[max-1]=s+"…"}return L}
+function paint(c,r,sh){const all=[];(function g(o){all.push(o);o.k.forEach(g)})(r);c.lineCap="round";
+for(const o of all)for(const k of o.k){const x1=o.x+MW,y1=o.y+MH/2,x2=k.x,y2=k.y+MH/2,mx=(x1+x2)/2;c.beginPath();c.moveTo(x1,y1);c.bezierCurveTo(mx,y1,mx,y2,x2,y2);c.strokeStyle=k.col+"b0";c.lineWidth=2;c.stroke()}
+for(const o of all){const n=o.n,rt=o.d==0,x=o.x,y=o.y,kids=(n.children||[]).length;c.save();if(sh){c.shadowColor="rgba(0,0,0,.4)";c.shadowBlur=12;c.shadowOffsetY=4}rr(c,x,y,MW,MH,12);c.fillStyle=rt?"#5b5bf0":"#ffffff";c.fill();c.restore();
+if(!rt){c.save();rr(c,x,y,MW,MH,12);c.clip();c.fillStyle=o.col;c.fillRect(x,y,5,MH);c.restore()}
+const tx=x+(rt?14:18),tw=MW-(rt?28:34)-(kids?12:0);c.textBaseline="top";c.font="600 14px Inter,system-ui,sans-serif";c.fillStyle=rt?"#fff":"#111827";const tl=wrap(c,cl(n.title),tw,2);tl.forEach((s,i)=>c.fillText(s,tx,y+10+i*18));
+c.font="400 11.5px Inter,system-ui,sans-serif";c.fillStyle=rt?"#e4e4ff":"#6b7280";wrap(c,cl(n.desc),tw,tl.length>1?2:3).forEach((s,i)=>c.fillText(s,tx,y+14+tl.length*18+i*14));
+if(kids){const cx=x+MW,cy=y+MH/2;c.beginPath();c.arc(cx,cy,10,0,7);c.fillStyle="#5b5bf0";c.fill();c.lineWidth=2;c.strokeStyle="#0f1424";c.stroke();c.strokeStyle="#fff";c.beginPath();c.moveTo(cx-4,cy);c.lineTo(cx+4,cy);if(n.c){c.moveTo(cx,cy-4);c.lineTo(cx,cy+4)}c.stroke()}}}
+function mapView(m,o){const root=m.tree||(m.tree=fromCode(m.code||""));
+o.innerHTML=`<div class=mmw><canvas></canvas><div class=zb><button aria-label="Perbesar">＋</button><button aria-label="Perkecil">－</button><button aria-label="Pas layar">⤢</button></div></div><p class=mut style="font-size:13px;margin:0">Geser untuk menggeser, cubit atau scroll untuk zoom, ketuk tombol bulat di cabang untuk menutup/membuka.</p><button class=b>Download PNG</button><button class="b g">Buka semua</button><button class="b g">Ciutkan</button>`;
+const wr=o.querySelector(".mmw"),cv=wr.querySelector("canvas"),[zi,zo,zf]=wr.querySelectorAll(".zb button"),[dl,oa,ca]=o.querySelectorAll(":scope>.b");
+let LY=layout(root),V={x:0,y:0,k:1},ready=0;const P=new Map();let last=1,moved=0;
+const draw=()=>{const d=devicePixelRatio||1,c=cv.getContext("2d");c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,cv.width,cv.height);c.setTransform(d*V.k,0,0,d*V.k,d*V.x,d*V.y);paint(c,LY.r,0)};
+const fit=full=>{const cw=cv.clientWidth,ch=cv.clientHeight,f=Math.min(cw/(LY.w+80),ch/(LY.h+80),1);if(full||f>=.55){V.k=Math.max(f,.12);V.x=(cw-LY.w*V.k)/2;V.y=(ch-LY.h*V.k)/2}else{V.k=.6;V.x=30;V.y=ch/2-(LY.r.y+MH/2)*.6}};
+const size=()=>{const d=devicePixelRatio||1;cv.width=cv.clientWidth*d;cv.height=cv.clientHeight*d;if(!ready&&cv.clientWidth){ready=1;fit(0)}draw()};
+const zoomAt=(cx,cy,f)=>{const k=Math.min(3,Math.max(.12,V.k*f));V.x=cx-(cx-V.x)*(k/V.k);V.y=cy-(cy-V.y)*(k/V.k);V.k=k};
+const pt=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+const relayout=()=>{LY=layout(root);save()};
+const tap=(x,y)=>{const wx=(x-V.x)/V.k,wy=(y-V.y)/V.k,rad=Math.min(40,Math.max(14,16/V.k)),all=[];(function g(q){all.push(q);q.k.forEach(g)})(LY.r);
+for(const q of all){if((q.n.children||[]).length&&Math.hypot(wx-(q.x+MW),wy-(q.y+MH/2))<=rad){const sx=(q.x+MW)*V.k+V.x,sy=(q.y+MH/2)*V.k+V.y,n=q.n;n.c=!n.c;relayout();const q2=(function f(z){if(z.n===n)return z;for(const c of z.k){const r=f(c);if(r)return r}})(LY.r);V.x=sx-(q2.x+MW)*V.k;V.y=sy-(q2.y+MH/2)*V.k;draw();return}}};
+cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);P.set(e.pointerId,pt(e));moved=0;if(P.size==2){const[a,b]=[...P.values()];last=Math.hypot(a[0]-b[0],a[1]-b[1])||1}};
+cv.onpointermove=e=>{if(!P.has(e.pointerId))return;const p=P.get(e.pointerId),q=pt(e);P.set(e.pointerId,q);if(P.size==1){V.x+=q[0]-p[0];V.y+=q[1]-p[1];moved+=Math.abs(q[0]-p[0])+Math.abs(q[1]-p[1])}else{const[a,b]=[...P.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1])||1;zoomAt((a[0]+b[0])/2,(a[1]+b[1])/2,d/last);last=d;moved=99}draw()};
+cv.onpointerup=cv.onpointercancel=e=>{if(P.size==1&&moved<6&&e.type=="pointerup"){const q=pt(e);tap(q[0],q[1])}P.delete(e.pointerId)};
+cv.addEventListener("wheel",e=>{e.preventDefault();const q=pt(e);zoomAt(q[0],q[1],e.deltaY<0?1.12:1/1.12);draw()},{passive:false});
+zi.onclick=()=>{zoomAt(cv.clientWidth/2,cv.clientHeight/2,1.25);draw()};zo.onclick=()=>{zoomAt(cv.clientWidth/2,cv.clientHeight/2,.8);draw()};zf.onclick=()=>{fit(1);draw()};
+const setAll=(f,v)=>{(function g(n,d){if((n.children||[]).length&&f(d))n.c=v;(n.children||[]).forEach(x=>g(x,d+1))})(root,0);relayout();fit(1);draw()};
+oa.onclick=()=>setAll(()=>1,false);ca.onclick=()=>setAll(d=>d>=1,true);
+dl.onclick=()=>{const{r,w,h}=layout(root),pad=48;let s=Math.min(2.5,9000/(w+2*pad),9000/(h+2*pad));while((w+2*pad)*(h+2*pad)*s*s>4e7)s*=.9;const c=document.createElement("canvas");c.width=Math.ceil((w+2*pad)*s);c.height=Math.ceil((h+2*pad)*s);const x=c.getContext("2d");x.fillStyle="#0f1424";x.fillRect(0,0,c.width,c.height);x.setTransform(s,0,0,s,pad*s,pad*s);paint(x,r,1);c.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(String(m.title||"mindmap").replace(/[^\w\- ]+/g,"").trim()||"mindmap")+".png";a.click();toast("PNG terunduh")})};
+new ResizeObserver(size).observe(wr);document.fonts.ready.then(draw);size()}
 const opts=(k,id,it,i)=>it.options.map((x,j)=>{const d=it.pk!=null,c=d?(j==it.answer?" ok":j==it.pk?" bad":""):"";return `<button class="opt${c}" ${d?"disabled":""} onclick="pick('${k}','${id}',${i},${j})">${md(x,0,1)}</button>`}).join("")+(it.pk!=null?`<p class=ex>${md(it.explain,0,1)}</p>`:"");
 const itm=(k,id,it,i)=>{const e=!it.options;return `<div class=card><p><b>${i+1}. ${md(it.q,0,1)}</b><span class=tag>${e?"Essay":"PG"}</span></p>${it.why?`<p class=mut>Prediksi: ${md(it.why,0,1)}</p>`:""}`+(e?`<textarea rows=4 placeholder="Tulis jawabanmu…" oninput="sv('${k}','${id}',${i},this.value)">${esc(it.ans||"")}</textarea><button class=b onclick="grade('${k}','${id}',${i})">Nilai dengan AI</button><div class=md id=g${i}>${it.fb?md(it.fb):""}</div>`:opts(k,id,it,i))+"</div>"};
 const lst=k=>(q,o)=>o.innerHTML=q.items.map((it,i)=>itm(k,q.id,it,i)).join("");
 const R={
 notes:(n,o,e)=>o.innerHTML=e?`<div class=card><textarea rows=16 oninput="ed('${n.id}',this.value)">${esc(n.content)}</textarea><button class=b onclick="libr('notes');openI('notes','${n.id}')">Selesai</button><button class="b g" onclick="pdf('${n.id}')">Download PDF</button></div>`:`<div class="card md">${md(n.content)}</div><button class=b onclick="pdf('${n.id}')">Download PDF</button><button class="b g" onclick="R.notes(S.notes.find(x=>x.id=='${n.id}'),$('#out'),1)">Edit catatan</button>`,
 sums:(n,o)=>o.innerHTML=`<div class="card md">${md(n.content)}</div>`,
-decks:(d,o)=>o.innerHTML=`<div class=grid>${d.cards.map(c=>`<div class=fc onclick="this.classList.toggle('f')"><b>${md(c.q,0,1)}</b><span>${md(c.a,0,1)}</span></div>`).join("")}</div>`,
+decks:(d,o)=>o.innerHTML=`<div class=grid>${d.cards.map(c=>`<div class=fc onclick="this.classList.toggle('f')"><b>${md(c.q,0,1)}</b><span class=ans>${md(c.a,0,1)}</span></div>`).join("")}</div>`,
 quizzes:lst("quizzes"),essays:lst("essays"),exams:lst("exams"),
-maps:(m,o)=>{o.innerHTML=`<div class=card><label>Kode mind map (edit, preview langsung berubah)</label><textarea id=mc rows=8>${esc(m.code)}</textarea></div><div class=card><div id=mp class=mp></div><button class=b onclick="dlMap()">Download SVG</button></div>`;const draw=async()=>{try{await mermaid.parse($("#mc").value);$("#mp").innerHTML=(await mermaid.render("m"+uid(),$("#mc").value)).svg}catch{}};draw();$("#mc").oninput=()=>{m.code=$("#mc").value;save();draw()}}};
-window.pdf=async id=>{const n=S.notes.find(x=>x.id==id);if(!n)return;toast("Menyiapkan PDF…");const el=document.createElement("div");el.style.cssText="position:fixed;left:-10000px;top:0;width:794px;background:#fff";el.innerHTML=`<style>.pp{font:13px/1.65 'Inter',Arial,sans-serif;color:#1a1d2e;background:#fff;padding:4px}.pp h1{font-size:26px;margin:0 0 6px;color:#2b3a9f;border-bottom:3px solid #2b3a9f;padding-bottom:8px}.pp h2{font-size:18px;margin:22px 0 6px;padding:6px 10px;background:#eef0ff;border-left:4px solid #2b3a9f;color:#1f2a7a}.pp h3{font-size:14.5px;margin:14px 0 4px;color:#2b3a9f}.pp p,.pp li{margin:4px 0}.pp table{border-collapse:collapse;width:100%;margin:8px 0}.pp td,.pp th{border:1px solid #c9cde8;padding:5px 8px;text-align:left}.pp th{background:#eef0ff}.pp code{background:#f1f2f8;padding:1px 4px;border-radius:3px}.pp blockquote{border-left:3px solid #c9cde8;margin:8px 0;padding-left:10px;color:#555}body{font-family:'Inter',system-ui,sans-serif;background:radial-gradient(900px 420px at 50% -120px,rgba(124,92,252,.16),transparent) no-repeat fixed,var(--bg);letter-spacing:-.005em}
-::selection{background:rgba(139,123,255,.35)}
-::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2a2a33;border-radius:10px;border:2px solid transparent;background-clip:content-box}
-.bar{background:rgba(9,9,11,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
-.lg b,.logo b{background:linear-gradient(90deg,#a78bfa,#6366f1);-webkit-background-clip:text;background-clip:text;color:transparent}
-nav{background:rgba(17,17,21,.94);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:20px 0 60px rgba(0,0,0,.5)}
-nav button{transition:background .15s,color .15s}nav button.on{background:rgba(139,123,255,.14);color:#fff}
-h1{font-weight:700;letter-spacing:-.03em}
-.card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border-radius:16px}
-input,textarea,.ddb{background:rgba(255,255,255,.03);border-radius:12px}
-input:focus,textarea:focus{border-color:rgba(255,255,255,.22)}
-.ddl{background:#17171c;border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.55)}.ddl div{transition:background .12s}
-.drop{transition:border-color .15s,color .15s}.drop:hover{border-color:rgba(139,123,255,.55);color:var(--tx)}
-.b{background:linear-gradient(135deg,#7c5cfc,#5b6cf9);color:#fff;border-radius:12px;box-shadow:0 6px 20px rgba(108,92,252,.28);transition:transform .12s,box-shadow .15s,filter .15s}
-.b:hover{filter:brightness(1.08);box-shadow:0 8px 26px rgba(108,92,252,.4)}.b:active{transform:scale(.98)}
-.b.g{background:var(--s2);color:var(--tx);box-shadow:none;border:1px solid var(--line)}.b.g:hover{background:#22222a;filter:none}
-.fc{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));transition:transform .15s,border-color .15s}.fc:hover{transform:translateY(-2px);border-color:rgba(139,123,255,.45)}
-.opt{background:rgba(255,255,255,.03);transition:border-color .15s,background .15s}.opt:hover:not(:disabled){border-color:rgba(139,123,255,.55);background:rgba(139,123,255,.08)}
-.opt.ok{background:rgba(52,211,153,.12);border-color:var(--ok)}.opt.bad{background:rgba(251,113,133,.12);border-color:var(--bad)}
-.seg{background:rgba(255,255,255,.03);border-radius:12px}.seg button.on{background:linear-gradient(135deg,#7c5cfc,#5b6cf9);color:#fff}
-.st{background:rgba(255,255,255,.03);border-radius:12px}
-.ib.go{background:linear-gradient(135deg,#7c5cfc,#5b6cf9);color:#fff;box-shadow:0 4px 14px rgba(108,92,252,.35)}
-.comp{background:rgba(23,23,28,.88);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-.msg{border-radius:16px}.msg.u{background:linear-gradient(135deg,rgba(124,92,252,.3),rgba(91,108,249,.2));border-color:rgba(139,123,255,.32)}
-.act{background:rgba(139,123,255,.06);border-color:rgba(139,123,255,.5);border-radius:14px}
-.hello h1{background:linear-gradient(90deg,#fff,#b4a8ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hello .sg{background:rgba(255,255,255,.03);transition:border-color .15s,background .15s}.hello .sg:hover{border-color:rgba(139,123,255,.55);background:rgba(139,123,255,.08)}
-.chip,.tag{border:1px solid var(--line)}
-.ov{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}.md2{background:#17171c;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-.toast{background:#1f1f26;box-shadow:0 10px 30px rgba(0,0,0,.5)}
-.md h2{padding-bottom:4px;border-bottom:1px solid var(--line)}.md h3{color:#c4baff}.md th{background:rgba(255,255,255,.04)}
-</style><div class=pp>${md(n.content)}</div>`;document.body.append(el);try{await html2pdf().set({margin:[14,14,14,14],filename:(n.title.replace(/[^\w\- ]+/g,"").trim()||"catatan")+".pdf",image:{type:"jpeg",quality:.96},html2canvas:{scale:2,backgroundColor:"#ffffff"},jsPDF:{unit:"mm",format:"a4"},pagebreak:{mode:["css","legacy"],avoid:["h1","h2","h3","tr","li"]}}).from(el).save();toast("PDF terunduh")}catch(e){toast("Gagal membuat PDF")}el.remove()};
+maps:(m,o)=>mapView(m,o)};
+window.pdf=async id=>{const n=S.notes.find(x=>x.id==id);if(!n)return;const tt=document.createElement("div");tt.className="toast";tt.textContent="Menyiapkan PDF…";document.body.append(tt);const host=document.createElement("div");host.id="pdfhost";host.style.cssText="position:fixed;left:-10000px;top:0";host.innerHTML=`<style>.pp{width:690px;display:flow-root;font:14px/1.65 'Inter',Arial,sans-serif;color:#1a1d2e;background:#fff}.pp>:first-child{margin-top:0}.pp h1{font-size:26px;margin:0 0 6px;color:#2b3a9f;border-bottom:3px solid #2b3a9f;padding-bottom:8px}.pp h2{font-size:18px;margin:22px 0 6px;padding:6px 10px;background:#eef0ff;border-left:4px solid #2b3a9f;color:#1f2a7a}.pp h3{font-size:15px;margin:14px 0 4px;color:#2b3a9f}.pp p,.pp li{margin:4px 0}.pp table{border-collapse:collapse;width:100%;margin:8px 0}.pp td,.pp th{border:1px solid #c9cde8;padding:5px 8px;text-align:left}.pp th{background:#eef0ff}.pp code{background:#f1f2f8;padding:1px 4px;border-radius:3px}.pp blockquote{border-left:3px solid #c9cde8;margin:8px 0;padding-left:10px;color:#555}</style>`;document.body.append(host);
+try{await document.fonts.ready;const src=document.createElement("div");src.className="pp";src.innerHTML=md(n.content);host.append(src);const probe=document.createElement("div");probe.className="pp";host.append(probe);
+const PH=1000,chunks=[];let cur=[];
+for(const k of [...src.children]){probe.append(k.cloneNode(true));if(probe.offsetHeight>PH&&cur.length){const mv=[];while(cur.length>1&&/^H[1-6]$/.test(cur[cur.length-1].tagName))mv.unshift(cur.pop());chunks.push(cur);cur=[...mv,k];probe.innerHTML="";cur.forEach(x=>probe.append(x.cloneNode(true)))}else cur.push(k)}
+if(cur.length)chunks.push(cur);src.remove();probe.remove();
+const{jsPDF}=window.jspdf,pdf=new jsPDF({unit:"mm",format:"a4"}),W=182,H=269;
+for(let p=0;p<chunks.length;p++){tt.textContent=`Membuat PDF… ${p+1}/${chunks.length}`;const box=document.createElement("div");box.className="pp";chunks[p].forEach(x=>box.append(x.cloneNode(true)));host.append(box);const cv=await html2canvas(box,{scale:2,backgroundColor:"#ffffff",onclone:d=>{d.getElementById("pdfhost").style.left="0"}});box.remove();const r=W/cv.width,sh=Math.floor(H/r);for(let y=0;y<cv.height;y+=sh){const s=document.createElement("canvas");s.width=cv.width;s.height=Math.min(sh,cv.height-y);s.getContext("2d").drawImage(cv,0,y,cv.width,s.height,0,0,cv.width,s.height);if(p||y)pdf.addPage();pdf.addImage(s.toDataURL("image/jpeg",.95),"JPEG",14,14,W,s.height*r)}}
+const tot=pdf.getNumberOfPages();pdf.setFontSize(9);pdf.setTextColor(150);for(let i=1;i<=tot;i++){pdf.setPage(i);pdf.text(i+" / "+tot,105,290,{align:"center"})}
+pdf.save((n.title.replace(/[^\w\- ]+/g,"").trim()||"catatan")+".pdf");toast("PDF terunduh")}catch(e){console.error(e);toast("Gagal membuat PDF")}tt.remove();host.remove()};
 window.ed=(id,v)=>{const n=S.notes.find(x=>x.id==id);n.content=v;n.title=(v.match(/^#\s+(.+)/m)||[0,n.title])[1];save()};
 window.pick=(k,id,i,j)=>{const q=S[k].find(x=>x.id==id);q.items[i].pk=j;save();R[k](q,$("#out"))};
 window.sv=(k,id,i,v)=>{S[k].find(x=>x.id==id).items[i].ans=v;save()};
 window.grade=async(k,id,i)=>{const it=S[k].find(x=>x.id==id).items[i],g=$("#g"+i);g.textContent="Menilai…";try{it.fb=await ai(`Soal: ${it.q}\nKunci jawaban: ${it.key}\nJawaban siswa: ${it.ans||"(kosong)"}\n\nBeri nilai 0-100, apa yang sudah benar, dan apa yang kurang. Singkat.`);save();g.innerHTML=md(it.fb)}catch(e){g.textContent=e.message}};
-window.dlMap=()=>{const s=$("#mp svg");s.style.background="#09090b";const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([s.outerHTML],{type:"image/svg+xml"}));a.download="mindmap.svg";a.click()};
+
 // ---- Opsi prediksi ujian ----
 const exOpts=()=>{const st=k=>`<div class=st><button onclick="stp('${k}',-1)">−</button><b>${EX[k]}</b><button onclick="stp('${k}',1)">+</button></div>`;return `<label>Tipe soal</label><div class=seg>${[["pg","Pilihan ganda"],["essay","Essay"],["mix","Campur"]].map(([k,l])=>`<button class="${EX.t==k?"on":""}" onclick="EX.t='${k}';$('#eo').innerHTML=exOpts()">${l}</button>`).join("")}</div>`+(EX.t=="mix"?`<label>Berapa Essay</label>${st("e")}<label>Berapa PG</label>${st("p")}`:`<label>Berapa soal</label>${st("n")}`)};
 window.stp=(k,d)=>{EX[k]=Math.max(1,Math.min(50,EX[k]+d));$("#eo").innerHTML=exOpts()};
-const MM='Buat mind map dalam sintaks Mermaid "mindmap" (baris pertama: mindmap, lalu root((Topik)) dan cabang dengan indentasi). Jangan pakai tanda ()[]{} di teks node selain root. Balas hanya kodenya.\n\n';
 const TOOLS={
 decks:{h:["Flashcard","Buat kartu hafalan dari catatan atau file."],b:"Buat flashcard",f:async t=>({cards:await ai('Buat 15-25 flashcard (pertanyaan singkat, jawaban ringkas) dari materi. Balas JSON: [{"q":"","a":""}].\n\n'+t,{json:1})})},
 quizzes:{h:["Kuis","Soal pilihan ganda dengan pembahasan."],b:"Buat kuis",f:async t=>({items:await ai('Buat 10 soal pilihan ganda 4 opsi dari materi. Balas JSON: [{"q":"","options":["","","",""],"answer":0,"explain":""}] (answer = indeks opsi benar).\n\n'+t,{json:1})})},
 essays:{h:["Kuis Esai","Latihan menulis jawaban, dinilai AI."],b:"Buat soal esai",f:async t=>({items:await ai('Buat 5 soal esai dari materi. Balas JSON: [{"q":"","key":"kunci jawaban lengkap"}]\n\n'+t,{json:1})})},
 exams:{h:["Prediksi Ujian","AI menebak soal yang paling mungkin keluar dari materimu."],b:"Prediksi soal ujian",f:async t=>{const ne=EX.t=="essay"?EX.n:EX.t=="mix"?EX.e:0,np=EX.t=="pg"?EX.n:EX.t=="mix"?EX.p:0;return{items:await ai(`Kamu guru berpengalaman. Dari materi berikut, prediksi soal yang paling mungkin keluar di ujian (fokus pada konsep penting, bagian yang ditekankan, dan yang sering diujikan). Buat tepat ${np} soal pilihan ganda dan ${ne} soal essay, urut dari yang paling mungkin keluar. Balas JSON array. PG: {"q":"","options":["","","",""],"answer":0,"explain":"","why":"alasan singkat kenapa diprediksi keluar"}. Essay: {"q":"","key":"kunci jawaban lengkap","why":"alasan singkat"}.\n\n`+t,{json:1})}}},
-maps:{h:["Mind Map","Peta konsep dengan live preview dan download."],b:"Buat mind map",f:async t=>({code:clean(await ai(MM+t))})},
+maps:{h:["Mind Map","Peta konsep interaktif: geser, zoom, tutup/buka cabang, download PNG."],b:"Buat mind map",f:async t=>({tree:await ai('Buat mind map dari materi ini. Balas JSON objek tunggal: {"title":"topik pusat","desc":"deskripsi singkat","children":[{"title":"","desc":"","children":[]}]}. Aturan: 4-7 cabang utama; tiap cabang punya 2-5 sub-cabang; maksimal 3 tingkat di bawah pusat; title maksimal 5 kata; desc satu kalimat pendek (maks 15 kata); bahasa Indonesia; jangan pakai LaTeX atau tanda $.\n\n'+t,{json:1})})},
 sums:{h:["Rangkuman","Ringkas materi jadi poin penting."],b:"Rangkum",f:async t=>({content:await ai("Rangkum materi ini dalam Markdown: ringkasan singkat, poin-poin kunci, istilah penting.\n\n"+t)})},
 solve:{k:"sums",h:["Kerjakan Soal","Upload file soal, AI menjawab lengkap dengan langkahnya."],b:"Kerjakan soal",f:async t=>({content:await ai("Kerjakan semua soal berikut. Untuk tiap soal beri langkah pengerjaan dan jawaban akhir (Markdown).\n\n"+t)})}};
 const PRE={solve:"Soal: ",exams:"Prediksi: "};
@@ -204,14 +214,23 @@ Aturan isi:
 - Rapi dan konsisten: judul jelas, poin pendek, istilah penting dicetak tebal. Jangan ada kalimat pembuka atau penutup di luar catatan.`;
 const P=NF+"\n\nMateri dari pengguna:\n";
 function addNote(md){const n={id:uid(),title:(md.match(/^#\s+(.+)/m)||[0,TT||"Catatan"])[1],content:md};S.notes.unshift(n);save();libr("notes");R.notes(n,$("#out"))}
-window.mkNote=()=>run(async()=>addNote(await ai(P+await src())));
-window.ytNote=()=>run(async()=>{const u=$("#yt").value.trim();if(!/youtu/.test(u))throw new Error("Masukkan link YouTube yang valid.");TT="Catatan YouTube";addNote(await ai(P+"(materi: video YouTube terlampir)",{yt:u}))});
+const retry=async f=>{try{return await f()}catch(e){await new Promise(r=>setTimeout(r,1500));return f()}};
+const prog=t=>{const e=$("#out .load");if(e)e.textContent=t};
+async function genNote(t){prog("Menyusun kerangka catatan…");const O=await retry(()=>ai('Kamu penulis catatan pelajaran profesional. Dari materi berikut, rancang kerangka catatan belajar yang LENGKAP per Bab. Balas JSON: {"title":"Catatan <Topik>","bab":[{"judul":"","poin":["",""]}]}. 4-8 Bab berurutan logis; tiap Bab 4-8 poin (sub-topik) yang harus dibahas. Jika materi kurang lengkap atau hanya berupa judul, lengkapi sendiri sampai topik tercakup menyeluruh (setingkat kurikulum).\n\nMateri:\n'+t,{json:1})),bab=O.bab||[];if(!bab.length)throw new Error("Gagal menyusun kerangka catatan. Coba lagi.");
+const kr=bab.map((b,i)=>`Bab ${i+1}: ${b.judul}`).join("\n"),out=[];let done=0,nx=0;
+const job=async i=>{const b=bab[i];out[i]=await retry(()=>ai(`Kamu penulis catatan pelajaran profesional. Tulis HANYA Bab ${i+1} dari "${O.title}" dalam Markdown berbahasa Indonesia.\nFormat: mulai dengan "## Bab ${i+1}: ${b.judul}", lalu sub-bab "### ${i+1}.1 ...", dst, berisi penjelasan lengkap, definisi, rumus (LaTeX: inline $...$, blok $$...$$; kimia boleh \\ce{H2O}), contoh, dan tabel bila membantu. Akhiri dengan **Poin Penting**. Cakup poin: ${(b.poin||[]).join("; ")}.\nKerangka seluruh catatan (jangan tulis bab lain):\n${kr}\nJika materi kurang lengkap, lengkapi dengan pengetahuanmu tanpa membuang isi materi. Tanpa kalimat pembuka atau penutup.\n\nMateri:\n`+t));done++;prog(`Menulis catatan… Bab selesai ${done}/${bab.length}`)};
+prog(`Menulis catatan… Bab selesai 0/${bab.length}`);await Promise.all([0,1,2].map(async()=>{while(nx<bab.length)await job(nx++)}));
+prog("Menyusun ringkasan…");const sm=await retry(()=>ai(`Tulis bagian penutup catatan "${O.title}" dalam Markdown: "## Ringkasan" berisi 6-10 poin inti seluruh catatan. Kerangka:\n${kr}\nTanpa kalimat pembuka.`));
+return `# ${O.title}\n\n## Daftar Isi\n${bab.map((b,i)=>`${i+1}. Bab ${i+1}: ${b.judul}`).join("\n")}\n\n${out.join("\n\n")}\n\n${sm}`}
+window.mkNote=()=>run(async()=>{const t=await src();addNote(await genNote(t))});
+const ytId=u=>{const m=u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/|v\/))([\w-]{11})/);return m&&m[1]};
+window.ytNote=()=>run(async()=>{const id=ytId($("#yt").value.trim());if(!id)throw new Error("Link YouTube tidak valid. Contoh: https://youtube.com/watch?v=xxxxxxxxxxx");TT="Catatan YouTube";try{prog("Menonton video…");const vt=await retry(()=>ai("Tonton video ini dan tuliskan seluruh isinya sebagai bahan catatan belajar: poin-poin terstruktur dan lengkap (konsep, istilah, definisi, rumus, contoh, angka, urutan penjelasan). Maksimal 1800 kata. Bahasa Indonesia. Tanpa kalimat pembuka.",{yt:"https://www.youtube.com/watch?v="+id}));addNote(await genNote(vt))}catch(e){throw new Error(e.message+" — Pastikan video publik (bukan private atau dibatasi umur) dan tidak terlalu panjang.")}});
 window.gen=k=>run(async o=>{const T=TOOLS[k],sk=T.k||k,t=await src(),it={id:uid(),title:(PRE[k]||"")+TT,...await T.f(t)};S[sk].unshift(it);save();libr(sk);R[sk](it,o)});
 window.merge=async()=>{const fs=FILES;if(fs.length<2)return toast("Pilih minimal 2 file PDF");const out=await PDFLib.PDFDocument.create();for(const f of fs){const d=await PDFLib.PDFDocument.load(await f.arrayBuffer());(await out.copyPages(d,d.getPageIndices())).forEach(p=>out.addPage(p))}const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([await out.save()],{type:"application/pdf"}));a.download="gabungan.pdf";a.click();toast("PDF digabung")};
 // ---- Chat AI dengan izin ----
 const CH=`Kamu asisten AI serbaguna di BelajarWithAI: jawab pertanyaan apa saja (boleh Markdown) dan bantu belajar. Jawab dalam bahasa Indonesia. Balas HANYA JSON: {"reply":"jawaban","actions":[...]}.
 Jika pengguna butuh sesuatu dibuat/diubah, tambahkan action (maksimal 3), semuanya menunggu persetujuan pengguna:
-{"type":"add_note","title":"","content":"markdown"} | {"type":"edit_note","id":"id catatan","title":"","content":"markdown lengkap baru"} | {"type":"add_flashcards","title":"","cards":[{"q":"","a":""}]} | {"type":"add_quiz","title":"","items":[{"q":"","options":["","","",""],"answer":0,"explain":""}]} | {"type":"add_mindmap","title":"","code":"kode mermaid mindmap"}.
+{"type":"add_note","title":"","content":"markdown"} | {"type":"edit_note","id":"id catatan","title":"","content":"markdown lengkap baru"} | {"type":"add_flashcards","title":"","cards":[{"q":"","a":""}]} | {"type":"add_quiz","title":"","items":[{"q":"","options":["","","",""],"answer":0,"explain":""}]} | {"type":"add_mindmap","title":"","tree":{"title":"topik pusat","desc":"singkat","children":[{"title":"","desc":"","children":[]}]}} (title maks 5 kata, desc maks 15 kata, 4-7 cabang, 3 tingkat).
 Untuk add_note dan edit_note, title harus sama dengan judul # pertama (contoh: Catatan Kimia) dan content HARUS mengikuti aturan berikut (lengkapi sendiri walau permintaan pengguna singkat):
 ${NF}
 Kalau tidak perlu mengubah data, actions = [].`;
@@ -220,7 +239,7 @@ const SUG=["Tolong bikin catatan tentang Kimia","Jelaskan fotosintesis dengan se
 window.sg=t=>{$("#ci").value=t;send()};
 window.ar=e=>{e.style.height="auto";e.style.height=Math.min(e.scrollHeight,160)+"px"};
 function drawChat(){$("#chh").innerHTML=chatHead();$("#cm").innerHTML=C().m.length?C().m.map((m,i)=>`<div class="msg ${m.r}">${md(m.t,1)}</div>`+(m.acts||[]).map((a,j)=>`<div class=act>AI ingin ${AL[a.type]||"mengubah data"} tentang “${esc(a.title)}”${a.st?`<br><b style="color:var(--${a.st=="ok"?"ok":"mut"})">${a.st=="ok"?"Disetujui":"Ditolak"}</b>`:`<br><button class=b onclick="decide(${i},${j},1)">Setuju</button><button class="b g" onclick="decide(${i},${j},0)">Tidak</button>`}</div>`).join("")).join(""):'<div class=hello><h1>Mau belajar apa hari ini?</h1><p class=mut>Tanya apa saja, atau minta AI membuat catatan, flashcard, kuis, dan mind map.</p>'+SUG.map(s=>`<button class=sg onclick="sg(this.textContent)">${s}</button>`).join("")+'</div>';$("#cm").scrollTop=1e9}
-window.decide=(i,j,ok)=>{const a=C().m[i].acts[j];if(ok){const id=uid(),t=a.type;if(t=="add_note")S.notes.unshift({id,title:a.title,content:a.content});if(t=="edit_note"){const n=S.notes.find(x=>x.id==a.id);if(n)n.content=a.content}if(t=="add_flashcards")S.decks.unshift({id,title:a.title,cards:a.cards});if(t=="add_quiz")S.quizzes.unshift({id,title:a.title,items:a.items});if(t=="add_mindmap")S.maps.unshift({id,title:a.title,code:clean(a.code)})}a.st=ok?"ok":"no";save();drawChat()};
+window.decide=(i,j,ok)=>{const a=C().m[i].acts[j];if(ok){const id=uid(),t=a.type;if(t=="add_note")S.notes.unshift({id,title:a.title,content:a.content});if(t=="edit_note"){const n=S.notes.find(x=>x.id==a.id);if(n)n.content=a.content}if(t=="add_flashcards")S.decks.unshift({id,title:a.title,cards:a.cards});if(t=="add_quiz")S.quizzes.unshift({id,title:a.title,items:a.items});if(t=="add_mindmap")S.maps.unshift({id,title:a.title,...(a.tree?{tree:a.tree}:{code:clean(a.code||"")})})}a.st=ok?"ok":"no";save();drawChat()};
 window.send=async()=>{const i=$("#ci"),m=i.value.trim();if(!m&&!FILES.length)return;const fl=FILES,nm=fl.map(f=>f.name);i.value="";i.style.height="auto";FILES=[];rf();let c=S.chats.find(x=>x.id==S.cid);if(!c){c={id:uid(),title:(m||"Lampiran").slice(0,40),m:[]};S.chats.unshift(c);S.cid=c.id}c.m.push({r:"u",t:(m||"(lampiran)")+(nm.length?"\n\n📎 "+nm.join(", "):"")});save();drawChat();$("#cm").insertAdjacentHTML("beforeend",'<div class="msg load">AI sedang mengetik…</div>');$("#cm").scrollTop=1e9;try{let ft="";for(const f of fl)ft+=`\n# ${f.name}\n`+await fileText(f);const ctx=S.notes.map(n=>`[${n.id}] ${n.title}: ${n.content.slice(0,400)}`).join("\n"),hs=c.m.slice(-10).map(x=>(x.r=="u"?"User: ":"AI: ")+x.t).join("\n"),d=await ai(`Catatan pengguna:\n${ctx||"(kosong)"}${ft?"\n\nFile terlampir:"+ft.slice(0,200000):""}\n\nRiwayat:\n${hs}`,{json:1,system:CH});c.m.push({r:"a",t:d.reply,acts:d.actions||[]})}catch(e){c.m.push({r:"a",t:"Error: "+e.message})}save();if(S.cid==c.id)drawChat()};
 const chatHead=()=>`<button class="b g" onclick="nc()">＋ Chat baru</button><div class=dd><button class="b g" onclick="tg(event)">Riwayat (${S.chats.length}) ▾</button><div class=ddl style="right:0;left:auto;min-width:260px">${S.chats.length?S.chats.map(c=>`<div class="hi ${c.id==S.cid?"on":""}" onclick="oc('${c.id}')"><span>${esc(c.title||"Chat")}</span><i onclick="event.stopPropagation();dc('${c.id}')">Hapus</i></div>`).join(""):"<em>Belum ada riwayat</em>"}</div></div>`;
 window.nc=()=>{S.cid="";save();FILES=[];rf();$("#ci").value="";drawChat();$("#ci").focus()};
