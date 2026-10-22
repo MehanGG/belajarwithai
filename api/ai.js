@@ -6,8 +6,12 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).end();
   const key = process.env.GeminiAPI;
   if (!key) return res.status(500).json({ error: "Environment variable GeminiAPI belum diatur di Vercel." });
-  const { system, prompt, yt, json } = req.body || {};
+  const { system, prompt, yt, json, images } = req.body || {};
   const parts = [];
+  for (const im of (Array.isArray(images) ? images : []).slice(0, 8)) {
+    if (/^image\/(jpeg|png|webp)$/.test(im?.mime) && typeof im.data === "string")
+      parts.push({ inline_data: { mime_type: im.mime, data: im.data } });
+  }
   if (yt) {
     const m = String(yt).match(YT);
     if (!m) return res.status(400).json({ error: "Link YouTube tidak valid." });
